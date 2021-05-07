@@ -1,0 +1,40 @@
+{
+  "name": "embed-paginator",
+  "version": "1.0.0",
+  "description": "Paginate Message Embeds for Discord.JS library",
+  "main": "dist/index.js",
+  "types": "dist/index.d.js",
+  "files": [
+    "/dist"
+  ],
+  "scripts": {
+    "build": "rm -f -- ./dist/* && tsc",
+    "dev": "tsc -w"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Spimy/embed-paginator.git"
+  },
+  "keywords": [
+    "discord.js",
+    "embed",
+    "pagination",
+    "paginator",
+    "message",
+    "messageembed",
+    "discord",
+    "bot"
+  ],
+  "author": "Spimy",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Spimy/embed-paginator/issues"
+  },
+  "homepage": "https://github.com/Spimy/embed-paginator#readme",
+  "devDependencies": {
+    "typescript": "^4.2.4"
+  },
+  "dependencies": {
+    "discord.js": "^12.5.3"
+  }
+}
