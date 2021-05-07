@@ -166,7 +166,7 @@ export class PaginatedEmbed {
             if (this.pages.length < 2) {
                 this.currentPage = 1;
                 await this.changePage();
-                msg.edit(this.messageEmbed);
+                msg.edit({ embed: this.messageEmbed });
             }
 
             const action = reaction.emoji.name;
