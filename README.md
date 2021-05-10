@@ -75,17 +75,17 @@ module.exports.execute = (client, message, args) => {
         itemsPerPage: 2,
         paginationType: 'description'
     })
-        .setThumbnail(message.author.avatarURL({ dynamic: true, size: 2048 })!)
+        .setThumbnail(message.author.avatarURL({ dynamic: true, size: 2048 }))
         .setTimestamp()
         .setTitle('Testing stuff');
 
     embed.send(message.channel, 'a test message to go along with the embed');
-}
+};
 
 module.exports.info = {
     name: 'test',
     aliases: ['t']
-}
+};
 ```
 
 ### Result
