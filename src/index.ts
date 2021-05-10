@@ -145,10 +145,12 @@ export class PaginatedEmbed {
 
     public setURL(url) {
         this.messageEmbed.setURL(url);
+        return this;
     }
 
     public attachFiles(files: (FileOptions | string | MessageAttachment)[]) {
         this.messageEmbed.attachFiles(files);
+        return this;
     }
 
     public async send(channel: TextChannel, message?: string) {
