@@ -26,6 +26,7 @@ interface EmbedItems {
   colours?: ColorResolvable[];
   descriptions?: string[];
   fields?: APIEmbedField[];
+  images?: string[];
   thumbnails?: string[];
 }
 
@@ -76,6 +77,7 @@ export class PaginatedEmbed {
     const colours = items.colours ? [...items.colours] : [];
     const descriptions = items.descriptions ? [...items.descriptions] : [];
     const fields = items.fields ? [...items.fields] : [];
+    const images = items.images ? [...items.images] : [];
     const thumbnails = items.thumbnails ? [...items.thumbnails] : [];
     const pages: EmbedItems[] = [];
 
@@ -125,6 +127,7 @@ export class PaginatedEmbed {
         colours: colours.length > 0 ? colours.splice(0, 1) : pages[pages.length - 1]?.colours || ['Random'],
         descriptions: pageDescriptions,
         fields: pageFields,
+        images: images.length > 0 ? images.splice(0, 1) : pages[pages.length - 1]?.images || [undefined],
         thumbnails: thumbnails.length > 0 ? thumbnails.splice(0, 1) : pages[pages.length - 1]?.thumbnails || [undefined]
       };
 
@@ -157,6 +160,10 @@ export class PaginatedEmbed {
 
     if (this.options.thumbnails) {
       this.messageEmbed.setThumbnail(this.pages[this.currentPage - 1].thumbnails![0]);
+    }
+
+    if (this.options.images) {
+      this.messageEmbed.setImage(this.pages[this.currentPage - 1].images![0]);
     }
   }
 
@@ -214,6 +221,15 @@ export class PaginatedEmbed {
     return this;
   }
 
+  public setImages(urls: string[]) {
+    this.options.images = urls;
+
+    if (!this.embedMsg || !this.embedMsg.editedAt) {
+      this.changePage();
+    }
+    return this;
+  }
+
   public setThumbnails(urls: string[]) {
     this.options.thumbnails = urls;
 
@@ -229,11 +245,6 @@ export class PaginatedEmbed {
       iconURL,
       url
     });
-    return this;
-  }
-
-  public setImage(url: string) {
-    this.messageEmbed.setImage(url);
     return this;
   }
 
