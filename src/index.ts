@@ -16,17 +16,22 @@ import {
   JSONEncodable,
   APIActionRowComponent,
   APIMessageActionRowComponent,
-  EmbedFooterOptions
+  EmbedFooterOptions,
+  EmbedAuthorOptions
 } from 'discord.js';
 
 const paginationTypeList = ['description', 'field', 'both'] as const;
 type paginationType = typeof paginationTypeList[number];
 
 interface EmbedItems {
+  authors?: EmbedAuthorOptions[];
+  titles?: string[];
+  urls?: string[];
   colours?: ColorResolvable[];
   descriptions?: string[];
   fields?: APIEmbedField[];
   images?: string[];
+  footers?: EmbedFooterOptions[];
   thumbnails?: string[];
 }
 
@@ -52,7 +57,7 @@ interface SendOptions {
 }
 
 export class PaginatedEmbed {
-  private options: EmbedOptions & { footer?: EmbedFooterOptions };
+  private options: EmbedOptions & { footers?: EmbedFooterOptions[] };
   private messageEmbed: EmbedBuilder;
   private pages: EmbedItems[] = [];
 
@@ -74,10 +79,14 @@ export class PaginatedEmbed {
   }
 
   private async setupPages(items: EmbedItems) {
+    const authors = items.authors ? [...items.authors] : [];
+    const titles = items.titles ? [...items.titles] : [];
+    const urls = items.urls ? [...items.urls] : [];
     const colours = items.colours ? [...items.colours] : [];
     const descriptions = items.descriptions ? [...items.descriptions] : [];
     const fields = items.fields ? [...items.fields] : [];
     const images = items.images ? [...items.images] : [];
+    const footers = items.footers ? [...items.footers] : [];
     const thumbnails = items.thumbnails ? [...items.thumbnails] : [];
     const pages: EmbedItems[] = [];
 
@@ -124,10 +133,14 @@ export class PaginatedEmbed {
       }
 
       const page = {
+        authors: authors.length > 0 ? authors.splice(0, 1) : pages[pages.length - 1]?.authors || [],
+        titles: titles.length > 0 ? titles.splice(0, 1) : pages[pages.length - 1]?.titles || [''],
+        urls: urls.length > 0 ? urls.splice(0, 1) : pages[pages.length - 1]?.urls || [''],
         colours: colours.length > 0 ? colours.splice(0, 1) : pages[pages.length - 1]?.colours || ['Random'],
         descriptions: pageDescriptions,
         fields: pageFields,
         images: images.length > 0 ? images.splice(0, 1) : pages[pages.length - 1]?.images || [undefined],
+        footers: footers.length > 0 ? footers.splice(0, 1) : pages[pages.length - 1]?.footers || [undefined],
         thumbnails: thumbnails.length > 0 ? thumbnails.splice(0, 1) : pages[pages.length - 1]?.thumbnails || [undefined]
       };
 
@@ -142,8 +155,8 @@ export class PaginatedEmbed {
 
     const pageNumber = `Page ${this.currentPage} of ${this.pages.length === 0 ? 1 : this.pages.length}`;
     this.messageEmbed.setFooter({
-      text: this.options.footer?.text.replace(/{page}/gi, pageNumber) || pageNumber,
-      iconURL: this.options.footer?.iconURL
+      text: this.pages[this.currentPage - 1]?.footers[0]?.text.replace(/{page}/gi, pageNumber) || pageNumber,
+      iconURL: this.pages[this.currentPage - 1]?.footers[0]?.iconURL
     });
 
     if (this.options.descriptions) {
@@ -158,6 +171,24 @@ export class PaginatedEmbed {
       );
     }
 
+    if (this.options.authors) {
+      const author = this.pages[this.currentPage - 1].authors![0];
+      if (author) {
+        this.messageEmbed.setAuthor(author);
+      }
+    }
+
+    if (this.options.titles) {
+      const title = this.pages[this.currentPage - 1].titles![0];
+      if (title) {
+        this.messageEmbed.setTitle(title);
+      }
+    }
+
+    if (this.options.urls) {
+      this.messageEmbed.setURL(this.pages[this.currentPage - 1].urls![0] || undefined);
+    }
+
     if (this.options.thumbnails) {
       this.messageEmbed.setThumbnail(this.pages[this.currentPage - 1].thumbnails![0]);
     }
@@ -167,8 +198,13 @@ export class PaginatedEmbed {
     }
   }
 
-  public setTitle(title: string) {
-    this.messageEmbed.setTitle(title);
+  public setTitles(titles: string[]) {
+    this.options.titles = titles;
+    this.setupPages(this.options);
+
+    if (!this.embedMsg || !this.embedMsg.editedAt) {
+      this.changePage();
+    }
     return this;
   }
 
@@ -212,8 +248,9 @@ export class PaginatedEmbed {
     return this;
   }
 
-  public setFooter(options: EmbedFooterOptions) {
-    this.options.footer = options;
+  public setFooters(footers: EmbedFooterOptions[]) {
+    this.options.footers = footers;
+    this.setupPages(this.options);
 
     if (!this.embedMsg || !this.embedMsg.editedAt) {
       this.changePage();
@@ -223,6 +260,7 @@ export class PaginatedEmbed {
 
   public setImages(urls: string[]) {
     this.options.images = urls;
+    this.setupPages(this.options);
 
     if (!this.embedMsg || !this.embedMsg.editedAt) {
       this.changePage();
@@ -232,6 +270,7 @@ export class PaginatedEmbed {
 
   public setThumbnails(urls: string[]) {
     this.options.thumbnails = urls;
+    this.setupPages(this.options);
 
     if (!this.embedMsg || !this.embedMsg.editedAt) {
       this.changePage();
@@ -239,12 +278,13 @@ export class PaginatedEmbed {
     return this;
   }
 
-  public setAuthor(name: string, iconURL?: string, url?: string) {
-    this.messageEmbed.setAuthor({
-      name,
-      iconURL,
-      url
-    });
+  public setAuthors(authors: EmbedAuthorOptions[]) {
+    this.options.authors = authors;
+    this.setupPages(this.options);
+
+    if (!this.embedMsg || !this.embedMsg.editedAt) {
+      this.changePage();
+    }
     return this;
   }
 
@@ -253,8 +293,13 @@ export class PaginatedEmbed {
     return this;
   }
 
-  public setURL(url: string) {
-    this.messageEmbed.setURL(url);
+  public setURLs(urls: string[]) {
+    this.options.urls = urls;
+    this.setupPages(this.options);
+
+    if (!this.embedMsg || !this.embedMsg.editedAt) {
+      this.changePage();
+    }
     return this;
   }
 
