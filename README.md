@@ -55,8 +55,7 @@ module.exports.execute = (client, message, args) => {
 };
 
 module.exports.info = {
-  name: 'test',
-  aliases: ['t']
+  name: 'foo'
 };
 ```
 
