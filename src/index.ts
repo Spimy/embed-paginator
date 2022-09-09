@@ -23,9 +23,10 @@ const paginationTypeList = ['description', 'field', 'both'] as const;
 type paginationType = typeof paginationTypeList[number];
 
 interface EmbedItems {
-  colours: ColorResolvable[];
+  colours?: ColorResolvable[];
   descriptions?: string[];
   fields?: APIEmbedField[];
+  thumbnails?: string[];
 }
 
 interface EmbedOptions extends EmbedItems {
@@ -72,9 +73,10 @@ export class PaginatedEmbed {
   }
 
   private async setupPages(items: EmbedItems) {
-    const colours = [...items.colours];
+    const colours = items.colours ? [...items.colours] : [];
     const descriptions = items.descriptions ? [...items.descriptions] : [];
     const fields = items.fields ? [...items.fields] : [];
+    const thumbnails = items.thumbnails ? [...items.thumbnails] : [];
     const pages: EmbedItems[] = [];
 
     while (colours.length > 0 || descriptions.length > 0 || fields?.length > 0) {
@@ -122,7 +124,8 @@ export class PaginatedEmbed {
       const page = {
         colours: colours.length > 0 ? colours.splice(0, 1) : pages[pages.length - 1]?.colours || ['Random'],
         descriptions: pageDescriptions,
-        fields: pageFields
+        fields: pageFields,
+        thumbnails: thumbnails.length > 0 ? thumbnails.splice(0, 1) : pages[pages.length - 1]?.thumbnails || [undefined]
       };
 
       pages.push(page);
@@ -132,8 +135,10 @@ export class PaginatedEmbed {
   }
 
   private async changePage() {
+    this.messageEmbed.setColor(this.pages[this.currentPage - 1]?.colours[0] || 'Random');
+
     const pageNumber = `Page ${this.currentPage} of ${this.pages.length === 0 ? 1 : this.pages.length}`;
-    this.messageEmbed.setColor(this.pages[this.currentPage - 1]?.colours[0] || 'Random').setFooter({
+    this.messageEmbed.setFooter({
       text: this.options.footer?.text.replace(/{page}/gi, pageNumber) || pageNumber,
       iconURL: this.options.footer?.iconURL
     });
@@ -148,6 +153,10 @@ export class PaginatedEmbed {
         this.messageEmbed.data.fields?.length || 0,
         ...this.pages[this.currentPage - 1].fields!
       );
+    }
+
+    if (this.options.thumbnails) {
+      this.messageEmbed.setThumbnail(this.pages[this.currentPage - 1].thumbnails![0]);
     }
   }
 
@@ -198,6 +207,19 @@ export class PaginatedEmbed {
 
   public setFooter(options: EmbedFooterOptions) {
     this.options.footer = options;
+
+    if (!this.embedMsg || !this.embedMsg.editedAt) {
+      this.changePage();
+    }
+    return this;
+  }
+
+  public setThumbnails(urls: string[]) {
+    this.options.thumbnails = urls;
+
+    if (!this.embedMsg || !this.embedMsg.editedAt) {
+      this.changePage();
+    }
     return this;
   }
 
@@ -212,11 +234,6 @@ export class PaginatedEmbed {
 
   public setImage(url: string) {
     this.messageEmbed.setImage(url);
-    return this;
-  }
-
-  public setThumbnail(url: string) {
-    this.messageEmbed.setThumbnail(url);
     return this;
   }
 
