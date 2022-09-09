@@ -99,6 +99,7 @@ module.exports.info = {
   - If footer is not set, the embed pages will show
   - If footer is set, the embed pages will not show by default
     - Add `{page}` in the footer text in order to show embed pages as shown in the given [example](#how-to-use)
+- Add `toJSON()` method
 
 ## Author
 
