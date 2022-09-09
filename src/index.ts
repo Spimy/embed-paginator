@@ -1,191 +1,371 @@
 import {
-    ColorResolvable,
-    MessageEmbed,
-    EmbedFieldData,
-    TextChannel,
-    FileOptions,
-    MessageAttachment,
-    User,
-    MessageReaction
+  ColorResolvable,
+  EmbedBuilder,
+  ButtonInteraction,
+  ButtonBuilder,
+  ButtonStyle,
+  ActionRowBuilder,
+  Interaction,
+  Message,
+  TextChannel,
+  ComponentType,
+  APIEmbedField,
+  MessageActionRowComponentBuilder,
+  MessageActionRowComponentData,
+  ActionRowData,
+  JSONEncodable,
+  APIActionRowComponent,
+  APIMessageActionRowComponent,
+  EmbedFooterOptions
 } from 'discord.js';
 
 const paginationTypeList = ['description', 'field', 'both'] as const;
 type paginationType = typeof paginationTypeList[number];
 
 interface EmbedItems {
-    colours: ColorResolvable[];
-    descriptions?: string[];
-    fields?: EmbedFieldData[];
+  colours: ColorResolvable[];
+  descriptions?: string[];
+  fields?: APIEmbedField[];
 }
 
 interface EmbedOptions extends EmbedItems {
-    duration: number;
-    itemsPerPage: number;
-    paginationType: paginationType;
-    footerImageURL?: string;
+  duration?: number;
+  itemsPerPage: number;
+  paginationType: paginationType;
+}
+
+interface SendOptions {
+  message?: string;
+  options: {
+    interaction?: Interaction;
+    ephemeral?: boolean;
+    followUp?: boolean;
+    channel?: TextChannel;
+    components?: (
+      | JSONEncodable<APIActionRowComponent<APIMessageActionRowComponent>>
+      | ActionRowData<MessageActionRowComponentData | MessageActionRowComponentBuilder>
+      | APIActionRowComponent<APIMessageActionRowComponent>
+    )[];
+  };
 }
 
 export class PaginatedEmbed {
-    private options: EmbedOptions;
+  private options: EmbedOptions & { footer?: EmbedFooterOptions };
+  private messageEmbed: EmbedBuilder;
+  private pages: EmbedItems[] = [];
 
-    private messageEmbed: MessageEmbed;
-    private pages: EmbedItems[];
+  private currentPage: number = 1;
+  private paginate: boolean = true;
 
-    private readonly next = '⏩';
-    private readonly previous = '⏪';
+  private embedMsg: Message;
 
-    private currentPage: number = 1;
-
-    constructor(options: EmbedOptions) {
-        if (paginationTypeList.indexOf(options.paginationType) === -1) {
-            throw new Error(
-                'An invalid pagination type has been passed. Valid pagination types: description, field, both.'
-            );
-        }
-        this.options = options;
-
-        this.messageEmbed = new MessageEmbed();
-        this.setupPages(options);
-        this.changePage();
+  constructor(options: EmbedOptions) {
+    if (paginationTypeList.indexOf(options.paginationType) === -1) {
+      throw new Error('An invalid pagination type has been passed. Valid pagination types: description, field, both.');
     }
 
-    private async setupPages(items: EmbedItems) {
-        const colours = [...items.colours];
-        const descriptions = items.descriptions ? [...items.descriptions] : undefined;
-        const fields = items.fields ? [...items.fields] : undefined;
+    this.options = options;
+    this.messageEmbed = new EmbedBuilder();
 
-        const pages: EmbedItems[] = [];
+    this.setupPages(options);
+    this.changePage();
+  }
 
-        while (colours.length > 0 || descriptions.length > 0 || fields?.length > 0) {
-            let pageDescriptions;
-            let pageFields;
+  private async setupPages(items: EmbedItems) {
+    const colours = [...items.colours];
+    const descriptions = items.descriptions ? [...items.descriptions] : [];
+    const fields = items.fields ? [...items.fields] : [];
+    const pages: EmbedItems[] = [];
 
-            if (this.options.paginationType === 'field') {
-                if (!this.options.fields || this.options.fields.length === 0) {
-                    throw new Error('No fields have been passed for field pagination. Unable to paginate.');
-                }
-                descriptions?.splice(0, descriptions?.length);
-                pageDescriptions = items.descriptions;
-                pageFields = fields.splice(0, this.options.itemsPerPage);
-            }
+    while (colours.length > 0 || descriptions.length > 0 || fields?.length > 0) {
+      let pageDescriptions;
+      let pageFields;
 
-            if (this.options.paginationType === 'description') {
-                if (!this.options.descriptions || this.options.descriptions.length === 0) {
-                    throw new Error('No descriptions have been passed for description pagination. Unable to paginate.');
-                }
-                fields?.splice(0, fields?.length);
-                pageDescriptions = descriptions.splice(0, this.options.itemsPerPage);
-                pageFields = items.fields;
-            }
-
-            if (this.options.paginationType === 'both') {
-                if (
-                    (!this.options.descriptions || this.options.descriptions.length === 0) &&
-                    (!this.options.fields || this.options.fields.length === 0)
-                ) {
-                    throw new Error('No fields/descriptions have been passed for both pagination. Unable to paginate.');
-                }
-                pageDescriptions = descriptions?.splice(0, this.options.itemsPerPage);
-                pageFields = fields?.splice(0, this.options.itemsPerPage);
-            }
-
-            const page = {
-                colours: colours.length > 0 ? colours.splice(0, 1) : pages[pages.length - 1].colours,
-                descriptions: pageDescriptions,
-                fields: pageFields
-            };
-
-            pages.push(page);
+      if (this.options.paginationType === 'field') {
+        if (!this.options.fields || this.options.fields.length < this.options.itemsPerPage) {
+          this.paginate = false;
+        } else {
+          this.paginate = true;
         }
 
-        this.pages = pages;
-    }
+        descriptions?.splice(0, descriptions?.length);
+        pageDescriptions = items.descriptions;
+        pageFields = fields.splice(0, this.options.itemsPerPage);
+      }
 
-    private async changePage() {
-        this.messageEmbed
-            .setColor(this.pages[this.currentPage - 1].colours[0])
-            .setFooter(
-                `Page ${this.currentPage} of ${this.pages.length === 0 ? 1 : this.pages.length}`,
-                this.options.footerImageURL
-            );
-
-        if (this.options.descriptions) {
-            this.messageEmbed.setDescription(this.pages[this.currentPage - 1].descriptions.join('\n'));
+      if (this.options.paginationType === 'description') {
+        if (!this.options.descriptions || this.options.descriptions.length < this.options.itemsPerPage) {
+          this.paginate = false;
+        } else {
+          this.paginate = true;
         }
 
-        if (this.options.fields) {
-            this.messageEmbed.spliceFields(0, this.messageEmbed.fields.length, this.pages[this.currentPage - 1].fields);
+        fields?.splice(0, fields?.length);
+        pageDescriptions = descriptions.splice(0, this.options.itemsPerPage);
+        pageFields = items.fields;
+      }
+
+      if (this.options.paginationType === 'both') {
+        if (
+          (!this.options.descriptions || this.options.descriptions.length === 0) &&
+          (!this.options.fields || this.options.fields.length === 0)
+        ) {
+          this.paginate = false;
+        } else {
+          this.paginate = true;
         }
+
+        pageDescriptions = descriptions?.splice(0, this.options.itemsPerPage);
+        pageFields = fields?.splice(0, this.options.itemsPerPage);
+      }
+
+      const page = {
+        colours: colours.length > 0 ? colours.splice(0, 1) : pages[pages.length - 1]?.colours || ['Random'],
+        descriptions: pageDescriptions,
+        fields: pageFields
+      };
+
+      pages.push(page);
     }
 
-    public setTitle(title: any) {
-        this.messageEmbed.setTitle(title);
-        return this;
+    this.pages = pages;
+  }
+
+  private async changePage() {
+    const pageNumber = `Page ${this.currentPage} of ${this.pages.length === 0 ? 1 : this.pages.length}`;
+    this.messageEmbed.setColor(this.pages[this.currentPage - 1]?.colours[0] || 'Random').setFooter({
+      text: this.options.footer?.text.replace(/{page}/gi, pageNumber) || pageNumber,
+      iconURL: this.options.footer?.iconURL
+    });
+
+    if (this.options.descriptions) {
+      this.messageEmbed.setDescription(this.pages[this.currentPage - 1].descriptions!.join('\n'));
     }
 
-    public setAuthor(name: any, iconURL?: string, url?: string) {
-        this.messageEmbed.setAuthor(name, iconURL, url);
-        return this;
+    if (this.options.fields) {
+      this.messageEmbed.spliceFields(
+        0,
+        this.messageEmbed.data.fields?.length || 0,
+        ...this.pages[this.currentPage - 1].fields!
+      );
+    }
+  }
+
+  public setTitle(title: string) {
+    this.messageEmbed.setTitle(title);
+    return this;
+  }
+
+  public setDescriptions(descriptions: string[]) {
+    this.options.descriptions = descriptions;
+    this.setupPages(this.options);
+
+    if (!this.embedMsg || !this.embedMsg.editedAt) {
+      this.changePage();
+    }
+    return this;
+  }
+
+  public setFields(fields: APIEmbedField[]) {
+    this.options.fields = fields;
+    this.setupPages(this.options);
+
+    if (!this.embedMsg || !this.embedMsg.editedAt) {
+      this.changePage();
+    }
+    return this;
+  }
+
+  public setColours(colours: ColorResolvable[]) {
+    this.options.colours = colours;
+    this.setupPages(this.options);
+
+    if (!this.embedMsg || !this.embedMsg.editedAt) {
+      this.changePage();
+    }
+    return this;
+  }
+
+  public spliceFields(index: number, deleteCount: number, fields?: APIEmbedField[]) {
+    this.options.fields.splice(index, deleteCount, ...(fields || []));
+    this.setupPages(this.options);
+
+    if (!this.embedMsg || !this.embedMsg.editedAt) {
+      this.changePage();
+    }
+    return this;
+  }
+
+  public setFooter(options: EmbedFooterOptions) {
+    this.options.footer = options;
+    return this;
+  }
+
+  public setAuthor(name: string, iconURL?: string, url?: string) {
+    this.messageEmbed.setAuthor({
+      name,
+      iconURL,
+      url
+    });
+    return this;
+  }
+
+  public setImage(url: string) {
+    this.messageEmbed.setImage(url);
+    return this;
+  }
+
+  public setThumbnail(url: string) {
+    this.messageEmbed.setThumbnail(url);
+    return this;
+  }
+
+  public setTimestamp(timestamp?: Date | number) {
+    this.messageEmbed.setTimestamp(timestamp);
+    return this;
+  }
+
+  public setURL(url: string) {
+    this.messageEmbed.setURL(url);
+    return this;
+  }
+
+  public toJSON() {
+    return this.pages.reduce((acc, page, index) => {
+      acc[`${index + 1}`] = page;
+      return acc;
+    }, {});
+  }
+
+  public get fields() {
+    return this.options.fields;
+  }
+
+  public get descriptions() {
+    return this.options.descriptions;
+  }
+
+  public get colours() {
+    return this.options.colours;
+  }
+
+  public async send({ message, options: { interaction, ephemeral, followUp, channel, components } }: SendOptions) {
+    if (interaction && !interaction.isRepliable()) throw new Error('Interaction cannot be replied to.');
+    channel = (interaction?.channel as TextChannel) || channel;
+
+    if (!channel) {
+      throw new Error('Please provide either an interaction or channel.');
     }
 
-    public setImage(url: string) {
-        this.messageEmbed.setImage(url);
-        return this;
+    const btnsRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder().setCustomId('prevBtn').setLabel('Back').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('nextBtn').setLabel('Next').setStyle(ButtonStyle.Primary)
+    );
+
+    let msg: Message;
+    if (interaction) {
+      if (interaction.isRepliable()) {
+        if (followUp) {
+          msg = (await interaction.followUp({
+            content: message,
+            embeds: [this.messageEmbed],
+            components: this.paginate ? [btnsRow, ...(components || [])] : [...(components || [])],
+            ephemeral
+          })) as Message;
+        } else {
+          msg = (await interaction!.reply({
+            content: message,
+            embeds: [this.messageEmbed],
+            components: this.paginate ? [btnsRow, ...(components || [])] : [...(components || [])],
+            fetchReply: true,
+            ephemeral
+          })) as Message;
+        }
+      } else {
+        throw new Error(`The interaction ${interaction.id} passed as argument cannot be replied to.`);
+      }
+    } else {
+      msg = await channel.send({
+        content: message,
+        embeds: [this.messageEmbed],
+        components: this.paginate ? [btnsRow, ...(components || [])] : [...(components || [])]
+      });
+    }
+    if (!this.paginate) return msg;
+
+    const filter = (i: ButtonInteraction) => {
+      return (
+        (i.customId === 'nextBtn' || i.customId === 'prevBtn') &&
+        (typeof interaction !== 'undefined' ? i.user.id === interaction.user.id : !i.user.bot)
+      );
+    };
+
+    let collector = msg.createMessageComponentCollector({
+      filter,
+      componentType: ComponentType.Button
+      // time: 15000
+    });
+
+    if (this.options.duration) {
+      collector = msg.createMessageComponentCollector({
+        filter,
+        componentType: ComponentType.Button,
+        time: this.options.duration
+      });
+    } else {
+      collector = msg.createMessageComponentCollector({
+        filter,
+        componentType: ComponentType.Button
+      });
     }
 
-    public setThumbnail(url: string) {
-        this.messageEmbed.setThumbnail(url);
-        return this;
-    }
+    collector.on('collect', async (i: ButtonInteraction) => {
+      if (this.pages.length < 2) {
+        this.currentPage = 1;
 
-    public setTimestamp(timestamp?: Date | number) {
-        this.messageEmbed.setTimestamp(timestamp);
-        return this;
-    }
+        await this.changePage();
 
-    public setURL(url) {
-        this.messageEmbed.setURL(url);
-        return this;
-    }
+        if (interaction) {
+          await i.editReply({
+            embeds: [this.messageEmbed]
+          });
+        } else {
+          await msg.edit({
+            embeds: [this.messageEmbed]
+          });
+        }
+      }
 
-    public attachFiles(files: (FileOptions | string | MessageAttachment)[]) {
-        this.messageEmbed.attachFiles(files);
-        return this;
-    }
+      const action = i.customId;
+      switch (action) {
+        case 'nextBtn':
+          this.currentPage === this.pages.length ? (this.currentPage = 1) : this.currentPage++;
+          await i.update({ embeds: [this.messageEmbed] });
+          break;
+        case 'prevBtn':
+          this.currentPage === 1 ? (this.currentPage = this.pages.length) : this.currentPage--;
+          await i.update({ embeds: [this.messageEmbed] });
+          break;
+      }
 
-    public async send(channel: TextChannel, message?: string) {
-        const msg = await channel.send(message, { embed: this.messageEmbed });
-        await msg.react(this.previous);
-        await msg.react(this.next);
-
-        const filter = (reaction: MessageReaction, user: User) => {
-            return (reaction.emoji.name === this.next || reaction.emoji.name === this.previous) && !user.bot;
-        };
-
-        const collector = msg.createReactionCollector(filter, { time: this.options.duration });
-
-        collector.on('collect', async (reaction: MessageReaction, user: User) => {
-            if (this.pages.length < 2) {
-                this.currentPage = 1;
-                await this.changePage();
-                await msg.edit({ embed: this.messageEmbed });
-            }
-
-            const action = reaction.emoji.name;
-            switch (action) {
-                case this.next:
-                    this.currentPage === this.pages.length ? (this.currentPage = 1) : this.currentPage++;
-                    break;
-                case this.previous:
-                    this.currentPage === 1 ? (this.currentPage = this.pages.length) : this.currentPage--;
-                    break;
-            }
-
-            await this.changePage();
-            await msg.edit({ embed: this.messageEmbed });
-            reaction.users.remove(user);
+      await this.changePage();
+      if (interaction) {
+        await i.editReply({
+          embeds: [this.messageEmbed]
         });
+      } else {
+        await msg.edit({
+          embeds: [this.messageEmbed]
+        });
+      }
+    });
 
-        collector.on('end', () => msg.reactions.removeAll());
-    }
+    collector.on('end', (i, reason) => {
+      if (reason === 'messageDelete') return;
+      i.forEach((int) => int.editReply({ components: [] }));
+    });
+
+    this.embedMsg = msg;
+    return msg;
+  }
 }
