@@ -1,6 +1,6 @@
 {
   "name": "embed-paginator",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Paginate Message Embeds for Discord.JS library",
   "main": "dist/index.js",
   "types": "dist/index.d.js",
