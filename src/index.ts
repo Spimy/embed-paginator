@@ -45,6 +45,7 @@ interface EmbedOptions extends EmbedItems {
   firstBtn?: string;
   lastBtn?: string;
   showFirstLastBtns?: boolean;
+  useEmoji?: boolean;
 }
 
 interface SendOptions {
@@ -348,32 +349,38 @@ export class PaginatedEmbed {
     const btnsRow = new ActionRowBuilder<ButtonBuilder>();
 
     if (this.options.showFirstLastBtns) {
-      btnsRow.addComponents(
-        new ButtonBuilder()
-          .setCustomId('firstBtn')
-          .setLabel(this.options.firstBtn || 'First')
-          .setStyle(ButtonStyle.Primary)
-      );
+      const firstBtn = new ButtonBuilder()
+        .setCustomId('firstBtn')
+        .setLabel(this.options.firstBtn || 'First')
+        .setStyle(ButtonStyle.Primary);
+      if (this.options.useEmoji) firstBtn.setEmoji('⏮️');
+      btnsRow.addComponents(firstBtn);
     }
 
-    btnsRow.addComponents(
-      new ButtonBuilder()
-        .setCustomId('prevBtn')
-        .setLabel(this.options.prevBtn || 'Back')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId('nextBtn')
-        .setLabel(this.options.nextBtn || 'Next')
-        .setStyle(ButtonStyle.Primary)
-    );
+    const prevBtn = new ButtonBuilder()
+      .setCustomId('prevBtn')
+      .setLabel(this.options.prevBtn || 'Back')
+      .setStyle(ButtonStyle.Primary);
+
+    const nextBtn = new ButtonBuilder()
+      .setCustomId('nextBtn')
+      .setLabel(this.options.nextBtn || 'Next')
+      .setStyle(ButtonStyle.Primary);
+
+    if (this.options.useEmoji) {
+      prevBtn.setEmoji(this.options.useEmoji ? '◀️' : undefined);
+      nextBtn.setEmoji(this.options.useEmoji ? '▶️' : undefined);
+    }
+
+    btnsRow.addComponents(prevBtn, nextBtn);
 
     if (this.options.showFirstLastBtns) {
-      btnsRow.addComponents(
-        new ButtonBuilder()
-          .setCustomId('lastBtn')
-          .setLabel(this.options.lastBtn || 'Last')
-          .setStyle(ButtonStyle.Primary)
-      );
+      const lastBtn = new ButtonBuilder()
+        .setCustomId('lastBtn')
+        .setLabel(this.options.lastBtn || 'Last')
+        .setStyle(ButtonStyle.Primary);
+      if (this.options.useEmoji) lastBtn.setEmoji('⏭️');
+      btnsRow.addComponents(lastBtn);
     }
 
     let msg: Message;
