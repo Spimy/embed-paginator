@@ -156,9 +156,17 @@ export class PaginatedEmbed {
   private async changePage() {
     this.messageEmbed.setColor(this.pages[this.currentPage - 1]?.colours[0] || 'Random');
 
-    const pageNumber = `Page ${this.currentPage} of ${this.pages.length === 0 ? 1 : this.pages.length}`;
+    const currentPage = `${this.currentPage}`;
+    const maxPage = `${this.pages.length === 0 ? 1 : this.pages.length}`;
+    const pageNumber = `Page ${currentPage} of ${maxPage}`;
+
+    const footer = this.pages[this.currentPage - 1]?.footers[0]?.text
+      .replace(/{page}/gi, pageNumber)
+      .replace(/{curPage}/gi, currentPage)
+      .replace(/{maxPage}/gi, maxPage);
+
     this.messageEmbed.setFooter({
-      text: this.pages[this.currentPage - 1]?.footers[0]?.text.replace(/{page}/gi, pageNumber) || pageNumber,
+      text: footer || pageNumber,
       iconURL: this.pages[this.currentPage - 1]?.footers[0]?.iconURL
     });
 
