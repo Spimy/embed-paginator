@@ -29,7 +29,8 @@ const { PaginatedEmbed } = require('embed-paginator');
 module.exports.execute = (client, message, args) => {
   const embed = new PaginatedEmbed({
     itemsPerPage: 2,
-    paginationType: 'field'
+    paginationType: 'field',
+    showFirstLastBtns: false
   })
     .setDescriptions(['This is my test embed.'])
     .setThumbnails([
@@ -65,6 +66,26 @@ module.exports.info = {
 
 ## Change Log
 
+### 2.0.1
+
+This version is mainly for addressing language support
+
+- Add buttons to jump to first and last page
+  - Can be disabled by setting `showFirstLastBtns` to `false`
+  - Enabled by default
+- Add ability to customise pagination button text
+  - To edit the label for each button, set in the constructor:
+    - `firstBtn` - Label for button to jump to first page
+    - `prevBtn` - Label for button to change to previous page
+    - `nextBtn` - Label for button to change to next page
+    - `lastBtn` - Label for button to jump to last page
+- Add `{curPage}` and `{maxPage}` variables in footer text
+  - The `{page}` variable still exists (stays in English)
+  - If no footer is set then `{page}` will take over
+- Add ability to use emoji
+  - Disabled by default
+- Remove unused code for optimisation
+
 ### 2.0.0
 
 - Update Discord.JS from v12 to v14
@@ -94,6 +115,7 @@ module.exports.info = {
     - Thumbnails
     - Images
   - The newly enabled paginated attributes depend on the pagination of fields/descriptions
+  - Provide only one item to the arrays for persisting data (same text/data across all pages)
 - Add editable footer support
   - If footer is not set, the embed pages will show
   - If footer is set, the embed pages will not show by default
