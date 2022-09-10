@@ -39,6 +39,8 @@ interface EmbedOptions extends EmbedItems {
   duration?: number;
   itemsPerPage: number;
   paginationType: paginationType;
+  nextBtn?: string;
+  prevBtn?: string;
 }
 
 interface SendOptions {
@@ -331,8 +333,14 @@ export class PaginatedEmbed {
     }
 
     const btnsRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder().setCustomId('prevBtn').setLabel('Back').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId('nextBtn').setLabel('Next').setStyle(ButtonStyle.Primary)
+      new ButtonBuilder()
+        .setCustomId('prevBtn')
+        .setLabel(this.options.prevBtn || 'Back')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId('nextBtn')
+        .setLabel(this.options.nextBtn || 'Next')
+        .setStyle(ButtonStyle.Primary)
     );
 
     let msg: Message;
