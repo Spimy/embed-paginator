@@ -17,7 +17,8 @@ import {
   APIActionRowComponent,
   APIMessageActionRowComponent,
   EmbedFooterOptions,
-  EmbedAuthorOptions
+  EmbedAuthorOptions,
+  InteractionCollector
 } from 'discord.js';
 
 const paginationTypeList = ['description', 'field', 'both'] as const;
@@ -381,11 +382,7 @@ export class PaginatedEmbed {
       );
     };
 
-    let collector = msg.createMessageComponentCollector({
-      filter,
-      componentType: ComponentType.Button
-      // time: 15000
-    });
+    let collector: InteractionCollector<ButtonInteraction>;
 
     if (this.options.duration) {
       collector = msg.createMessageComponentCollector({
