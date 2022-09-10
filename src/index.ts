@@ -42,6 +42,9 @@ interface EmbedOptions extends EmbedItems {
   paginationType: paginationType;
   nextBtn?: string;
   prevBtn?: string;
+  firstBtn?: string;
+  lastBtn?: string;
+  showFirstLastBtns?: boolean;
 }
 
 interface SendOptions {
@@ -73,8 +76,9 @@ export class PaginatedEmbed {
     if (paginationTypeList.indexOf(options.paginationType) === -1) {
       throw new Error('An invalid pagination type has been passed. Valid pagination types: description, field, both.');
     }
-
     this.options = options;
+    this.options.showFirstLastBtns =
+      typeof options.showFirstLastBtns === 'undefined' ? true : options.showFirstLastBtns;
     this.messageEmbed = new EmbedBuilder();
 
     this.setupPages(options);
@@ -341,7 +345,18 @@ export class PaginatedEmbed {
       throw new Error('Please provide either an interaction or channel.');
     }
 
-    const btnsRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    const btnsRow = new ActionRowBuilder<ButtonBuilder>();
+
+    if (this.options.showFirstLastBtns) {
+      btnsRow.addComponents(
+        new ButtonBuilder()
+          .setCustomId('firstBtn')
+          .setLabel(this.options.firstBtn || 'First')
+          .setStyle(ButtonStyle.Primary)
+      );
+    }
+
+    btnsRow.addComponents(
       new ButtonBuilder()
         .setCustomId('prevBtn')
         .setLabel(this.options.prevBtn || 'Back')
@@ -351,6 +366,15 @@ export class PaginatedEmbed {
         .setLabel(this.options.nextBtn || 'Next')
         .setStyle(ButtonStyle.Primary)
     );
+
+    if (this.options.showFirstLastBtns) {
+      btnsRow.addComponents(
+        new ButtonBuilder()
+          .setCustomId('lastBtn')
+          .setLabel(this.options.lastBtn || 'Last')
+          .setStyle(ButtonStyle.Primary)
+      );
+    }
 
     let msg: Message;
     if (interaction) {
@@ -385,7 +409,10 @@ export class PaginatedEmbed {
 
     const filter = (i: ButtonInteraction) => {
       return (
-        (i.customId === 'nextBtn' || i.customId === 'prevBtn') &&
+        (i.customId === 'nextBtn' ||
+          i.customId === 'prevBtn' ||
+          i.customId === 'firstBtn' ||
+          i.customId === 'lastBtn') &&
         (typeof interaction !== 'undefined' ? i.user.id === interaction.user.id : !i.user.bot)
       );
     };
@@ -424,12 +451,20 @@ export class PaginatedEmbed {
 
       const action = i.customId;
       switch (action) {
+        case 'firstBtn':
+          this.currentPage = 1;
+          await i.update({ embeds: [this.messageEmbed] });
+          break;
         case 'nextBtn':
           this.currentPage === this.pages.length ? (this.currentPage = 1) : this.currentPage++;
           await i.update({ embeds: [this.messageEmbed] });
           break;
         case 'prevBtn':
           this.currentPage === 1 ? (this.currentPage = this.pages.length) : this.currentPage--;
+          await i.update({ embeds: [this.messageEmbed] });
+          break;
+        case 'lastBtn':
+          this.currentPage = this.pages.length;
           await i.update({ embeds: [this.messageEmbed] });
           break;
       }
